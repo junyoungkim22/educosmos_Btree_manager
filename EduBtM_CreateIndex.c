@@ -72,7 +72,7 @@ Four EduBtM_CreateIndex(
 
 	e = BfM_GetTrain((TrainID*)catObjForFile, (char**)&catPage, PAGE_BUF);
 	if(e < 0) ERR(e);
-	GET_PTR_TO_CATENTRY_FOR_DATA(catObjForFile, catPage, catEntry);
+	GET_PTR_TO_CATENTRY_FOR_BTREE(catObjForFile, catPage, catEntry);
 
 	MAKE_PHYSICALFILEID(pFid, catEntry->fid.volNo, catEntry->firstPage);
 
