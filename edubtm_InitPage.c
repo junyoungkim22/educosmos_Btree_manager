@@ -75,6 +75,7 @@ Four edubtm_InitInternal(
 	if(root)
 		page->hdr.type |= ROOT;
 	page->hdr.type |= INTERNAL;
+	page->hdr.p0 = NIL;
 	page->hdr.nSlots = 0;
 	page->hdr.free = 0;
 	page->hdr.unused = 0;

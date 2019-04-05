@@ -72,7 +72,32 @@ void edubtm_CompactInternalPage(
     Two                 i;                      /* index variable */
     btm_InternalEntry   *entry;                 /* an entry in leaf page */
 
-    
+	tpage.hdr = apage->hdr;
+	memcpy(tpage.data, apage->data, PAGESIZE-BI_FIXED);
+	tpage.slot[0] = apage->slot[0];
+
+	apageDataOffset = 0;
+
+	for(i = 0; i < tpage.hdr.nSlots; i++)
+	{
+		if(i != slotNo)
+		{
+			entry = &tpage.data[tpage.slot[-i]];
+			len = sizeof(entry->spid) + sizeof(entry->klen) + entry->klen;
+			memcpy(&apage->data[apageDataOffset], &tpage.data[tpage.slot[-i]], len);
+			apageDataOffset += ALIGNED_LENGTH(len);
+		}
+	}
+	if(slotNo != NIL)
+	{
+		entry = &tpage.data[tpage.slot[-slotNo]];
+		len = sizeof(entry->spid) + sizeof(entry->klen) + entry->klen;
+		memcpy(&apage->data[apageDataOffset], &tpage.data[tpage.slot[-slotNo]], len);
+		apageDataOffset += ALIGNED_LENGTH(len);
+	}
+
+   	apage->hdr.free = apageDataOffset;
+	apage->hdr.unused = 0;
 
 } /* edubtm_CompactInternalPage() */
 
@@ -110,6 +135,34 @@ void edubtm_CompactLeafPage(
     btm_LeafEntry 	*entry;			/* an entry in leaf page */
     Two 		alignedKlen;		/* aligned length of the key length */
 
+	tpage.hdr = apage->hdr;
+	memcpy(tpage.data, apage->data, PAGESIZE-BL_FIXED);
+	tpage.slot[0] = apage->slot[0];
+
+	apageDataOffset = 0;
+
+	for(i = 0; i < tpage.hdr.nSlots; i++)
+	{
+		if(i != slotNo)
+		{
+			entry = &tpage.data[tpage.slot[-i]];
+			alignedKlen = ALIGNED_LENGTH(entry->klen);
+			len = sizeof(entry->nObjects) + sizeof(entry->klen) + alignedKlen + sizeof(ObjectID);
+			memcpy(&apage->data[apageDataOffset], &tpage.data[tpage.slot[-i]], len);
+			apageDataOffset += ALIGNED_LENGTH(len);
+		}
+	}
+	if(slotNo != NIL)
+	{
+		entry = &tpage.data[tpage.slot[-slotNo]];
+		alignedKlen = ALIGNED_LENGTH(entry->klen);
+		len = sizeof(entry->nObjects) + sizeof(entry->klen) + alignedKlen + sizeof(ObjectID);
+		memcpy(&apage->data[apageDataOffset], &tpage.data[tpage.slot[-slotNo]], len);
+		apageDataOffset += ALIGNED_LENGTH(len);
+	}
+
+   	apage->hdr.free = apageDataOffset;
+	apage->hdr.unused = 0;
     
 
 } /* edubtm_CompactLeafPage() */
