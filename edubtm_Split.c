@@ -93,8 +93,130 @@ Four edubtm_SplitInternal(
     btm_InternalEntry           *nEntry;                /* internal entry in the new page, npage*/
     Boolean                     isTmp;
 
+	e = btm_AllocPage(catObjForFile, &fpage->hdr.pid, &newPid);
+	if(e < 0) ERR(e);
 
-    
+	e = edubtm_InitInternal(&newPid, FALSE, isTmp);
+   	if(e < 0) ERR(e); 
+
+	maxLoop = fpage->hdr.nSlots + 1;
+
+	sum = 0;
+	for(i = 0; i < maxLoop; i++)
+	{
+		sum += (sizeof(Two) + sizeof(ShortPageID));
+		if(i == high + 1)
+		{
+			sum +=  ALIGNED_LENGTH(sizeof(Two) + item->klen);
+			flag = TRUE;
+		}
+		else if(i < high + 1)
+		{
+			fEntry = &fpage->data[fpage->slot[-i]];
+			sum += ALIGNED_LENGTH(sizeof(Two) + fEntry->klen);
+		}
+		else if(i > high + 1)
+		{
+			fEntry = &fpage->data[fpage->slot[-(i-1)]];
+			sum += ALIGNED_LENGTH(sizeof(Two) + fEntry->klen);
+		}
+
+		if(sum >= BI_HALF)
+			break;
+	}
+	j = i;
+
+	e = BfM_GetTrain((TrainID*)&newPid, (char**)&npage, PAGE_BUF);
+	if(e < 0) ERR(e);
+
+	i++;
+	if(i == high + 1)
+	{
+		fEntry = item;
+	}
+	else if(i < high + 1)
+	{
+		fEntry = &fpage->data[fpage->slot[-i]];
+	}
+	else if(i > high + 1)
+	{
+		fEntry = &fpage->data[fpage->slot[-(i-1)]];
+	}
+	npage->hdr.p0 = fEntry->spid;
+
+	ritem->spid = npage->hdr.pid.pageNo;
+	
+	nEntryOffset = 0;
+	k = 0;
+	i++;
+	while(i < maxLoop)
+	{
+		npage->slot[-k] = nEntryOffset;
+		nEntry = &npage->data[nEntryOffset];
+		if(i == high + 1)
+		{
+			nEntry->spid = item->spid;
+			nEntry->klen = item->klen;
+			memcpy(nEntry->kval, item->kval, item->klen);
+		}
+		else if(i < high + 1)
+		{
+			fEntry = &fpage->data[fpage->slot[-i]];
+			nEntry->spid =  fEntry->spid;
+			nEntry->klen = fEntry->klen;
+			memcpy(nEntry->kval, fEntry->kval, fEntry->klen);
+		}
+		else if(i > high + 1)
+		{
+			fEntry = &fpage->data[fpage->slot[-(i-1)]];
+			nEntry->spid =  fEntry->spid;
+			nEntry->klen = fEntry->klen;
+			memcpy(nEntry->kval, fEntry->kval, fEntry->klen);
+		}
+		nEntryOffset += sizeof(ShortPageID) + ALIGNED_LENGTH(sizeof(Two) + nEntry->klen);
+		i++;
+		k++;
+	}
+	npage->hdr.free = nEntryOffset;
+	npage->hdr.unused = 0;
+	npage->hdr.nSlots = k;
+
+	if(flag)
+	{
+		fpage->hdr.nSlots = j;
+		edubtm_CompactInternalPage(fpage, NIL);
+		for(i = j; i >= high + 2; i--)
+		{
+			fpage->slot[-i] = fpage->slot[-(i-1)];
+		}
+		fpage->slot[-(high + 1)] = npage->hdr.free;
+		fEntry = &fpage->data[fpage->slot[-(high + 1)]];
+		fEntry->spid = item->spid;
+		fEntry->klen = item->klen;
+		memcpy(fEntry->kval, item->kval, fEntry->klen);
+		entryLen = sizeof(ShortPageID) + ALIGNED_LENGTH(sizeof(Two) + fEntry->klen);
+		npage->hdr.free += entryLen;
+		npage->hdr.nSlots++;
+	}
+	else
+	{
+		fpage->hdr.nSlots = j + 1;
+		edubtm_CompactInternalPage(fpage, NIL);
+	}
+
+	if((fpage->hdr.type & ROOT) == ROOT)
+	{
+		fpage->hdr.type &= ~ROOT;
+	}
+
+	e = BfM_SetDirty(&fpage->hdr.pid, PAGE_BUF);
+	if(e < 0) ERRB1(e, &fpage->hdr.pid, PAGE_BUF);
+	e = BfM_SetDirty(&newPid, PAGE_BUF);
+	if(e < 0) ERRB1(e, &newPid, PAGE_BUF);
+
+	e = BfM_FreeTrain(&newPid, PAGE_BUF);
+	if(e < 0) ERR(e);
+
     return(eNOERROR);
     
 } /* edubtm_SplitInternal() */
