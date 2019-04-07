@@ -237,6 +237,32 @@ Four edubtm_InsertInternal(
     /*@ Initially the flag are FALSE */
     *h = FALSE;
     
+	entryLen = sizeof(ShortPageID) + ALIGNED_LENGTH(sizeof(Two) + item->klen);
+
+	if(BI_FREE(page) >= (entryLen + sizeof(Two)))
+	{
+		if(BI_CFREE(page) < entryLen + sizeof(Two))
+		{
+			edubtm_CompactInternalPage(page, NIL);
+		}
+		entry = &page->data[page->hdr.free];
+		entry->spid = item->spid;
+		entry->klen = item->klen;
+		memcpy(entry->kval, item->kval, entry->klen);
+		for(i = page->hdr.nSlots; i >= high + 2; i--)
+		{
+			page->slot[-i] = page->slot[-(i-1)];
+		}
+		page->slot[-(high + 1)] = page->hdr.free;
+		page->hdr.free += entryLen;
+		page->hdr.nSlots++;
+	}
+	else
+	{
+		*h = TRUE;
+		e = edubtm_SplitInternal(catObjForFile, page, high, item, ritem);
+		if(e < 0) ERR(e);
+	}
     
 
     return(eNOERROR);
