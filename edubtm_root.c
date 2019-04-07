@@ -80,8 +80,54 @@ Four edubtm_root_insert(
     btm_InternalEntry *entry;	/* an internal entry */
     Boolean   isTmp;
 
+	e = btm_AllocPage(catObjForFile, root, &newPid);
+	if(e < 0) ERR(e);
 
-    
+	e = BfM_GetNewTrain(&newPid, (char**)&newPage, PAGE_BUF);
+	if(e < 0) ERR(e);
+
+	e = BfM_GetNewTrain(root, (char**)&rootPage, PAGE_BUF);
+	if(e < 0) ERR(e);
+
+	memcpy(newPage, rootPage, PAGESIZE);
+
+	e = edubtm_InitInternal(root, TRUE, isTmp);
+	if(e < 0) ERR(e);
+
+	rootPage->bi.slot[0] = 0;
+	entry = rootPage->bi.data;
+	entry->spid = item->spid;
+	entry->klen = item->klen;
+	memcpy(entry->kval, item->kval, entry->klen);
+	rootPage->bi.hdr.free += (sizeof(ShortPageID) + ALIGNED_LENGTH(sizeof(Two) + entry->klen));
+	rootPage->bi.hdr.nSlots++;
+	rootPage->bi.hdr.p0 = newPage->any.hdr.pid.pageNo; 
+
+	newPage->any.hdr.type &= ~ROOT;	
+	
+	if(newPage->any.hdr.type & LEAF)
+	{
+		newPage->bl.hdr.nextPage = item->spid;
+		MAKE_PAGEID(nextPid, root->volNo, item->spid);
+		e = BfM_GetTrain(&nextPid, (char**)&nextPage, PAGE_BUF);
+		if(e < 0) ERR(e);
+		nextPage->hdr.prevPage = newPid.pageNo;
+		e = BfM_SetDirty(&nextPid, PAGE_BUF);
+		if(e < 0) ERRB1(e, &nextPid, PAGE_BUF);
+		e = BfM_FreeTrain(&nextPid, PAGE_BUF);
+		if(e < 0) ERR(e);
+	}
+
+	e = BfM_SetDirty(&newPid, PAGE_BUF);
+	if(e < 0) ERRB1(e, &newPid, PAGE_BUF);
+	e = BfM_SetDirty(root, PAGE_BUF);
+	if(e < 0) ERRB1(e, root, PAGE_BUF);
+
+	e = BfM_FreeTrain(&newPid, PAGE_BUF);
+	if(e < 0) ERR(e);
+	e = BfM_FreeTrain(root, PAGE_BUF);
+	if(e < 0) ERR(e);
+
     return(eNOERROR);
     
 } /* edubtm_root_insert() */

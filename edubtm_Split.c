@@ -280,6 +280,71 @@ Four edubtm_SplitLeaf(
     Boolean                     flag;
     Boolean                     isTmp;
  
+	e = btm_AllocPage(catObjForFile, &fpage->hdr.pid, &newPid);
+	if(e < 0) ERR(e);
+
+	e = edubtm_InitLeaf(&newPid, FALSE, isTmp);
+   	if(e < 0) ERR(e); 
+
+	maxLoop = fpage->hdr.nSlots + 1;
+
+	tpage.hdr = fpage->hdr;
+	memcpy(tpage.data, fpage->data, PAGESIZE-BL_FIXED);
+	tpage.slot[0] = fpage->slot[0];
+
+	sum = 0;
+	i = 0;
+	fEntryOffset = 0;
+	while(sum < BL_HALF)
+	{
+		if(i < (high + 1))
+		{
+			/*
+			fEntry = &fpage->data[fEntryOffset];
+			entryLen = sizeof(Two) + sizeof(Two) + ALIGNED_LEN(fEntry->klen + sizeof(ObjectID));
+			fpage->slot[-i] = fEntryOffset;
+			memcpy(&fpage->data[fEntryOffset], &tpage.data[tpage.slot[-i]], entryLen);
+			fEntryOffset += entryLen;
+			sum += (entryLen + sizeof(Two));
+			*/
+		}
+		else if(i == (high + 1))
+		{
+			/*
+			entryLen = sizeof(Two) + sizeof(Two) + ALIGNED_LEN(item->klen + sizeof(ObjectID));
+			fpage->slot[-i] = fEntryOffset;
+			memcpy(&fpage->data[fEntryOffset], 
+			*/
+		}
+		i++;
+	}
+	
+	for(i = 0; i < maxLoop; i++)
+	{
+		sum += (sizeof(Two) + sizeof(Two) + sizeof(Two));
+		if(i == high + 1)
+		{
+			sum +=  ALIGNED_LENGTH(sizeof(ObjectID) + item->klen);
+			flag = TRUE;
+		}
+		else if(i < high + 1)
+		{
+			fEntry = &fpage->data[fpage->slot[-i]];
+			sum += ALIGNED_LENGTH(sizeof(ObjectID) + fEntry->klen);
+		}
+		else if(i > high + 1)
+		{
+			fEntry = &fpage->data[fpage->slot[-(i-1)]];
+			sum += ALIGNED_LENGTH(sizeof(ObjectID) + fEntry->klen);
+		}
+
+		if(sum >= BL_HALF)
+			break;
+	}
+	j = i;
+
+	e = BfM_GetTrain((TrainID*)&newPid, (char**)&npage, PAGE_BUF);
+	if(e < 0) ERR(e);
     
 
     return(eNOERROR);
