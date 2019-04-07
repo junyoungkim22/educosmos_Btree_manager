@@ -286,66 +286,122 @@ Four edubtm_SplitLeaf(
 	e = edubtm_InitLeaf(&newPid, FALSE, isTmp);
    	if(e < 0) ERR(e); 
 
+	e = 
+
 	maxLoop = fpage->hdr.nSlots + 1;
 
-	tpage.hdr = fpage->hdr;
-	memcpy(tpage.data, fpage->data, PAGESIZE-BL_FIXED);
-	tpage.slot[0] = fpage->slot[0];
+	memcpy(&tpage, fpage, PAGESIZE);
 
 	sum = 0;
 	i = 0;
 	fEntryOffset = 0;
 	while(sum < BL_HALF)
 	{
+		fEntry = &fpage->data[fEntryOffset];
 		if(i < (high + 1))
 		{
-			/*
-			fEntry = &fpage->data[fEntryOffset];
-			entryLen = sizeof(Two) + sizeof(Two) + ALIGNED_LEN(fEntry->klen + sizeof(ObjectID));
+			itemEntry = &tpage.data[tpage.slot[-i]];
+			entryLen = sizeof(Two) + sizeof(Two) + ALIGNED_LENGTH(itemEntry->klen + sizeof(ObjectID));
 			fpage->slot[-i] = fEntryOffset;
-			memcpy(&fpage->data[fEntryOffset], &tpage.data[tpage.slot[-i]], entryLen);
-			fEntryOffset += entryLen;
-			sum += (entryLen + sizeof(Two));
-			*/
+			memcpy(fEntry, itemEntry, entryLen);
 		}
 		else if(i == (high + 1))
 		{
-			/*
-			entryLen = sizeof(Two) + sizeof(Two) + ALIGNED_LEN(item->klen + sizeof(ObjectID));
+			entryLen = sizeof(Two) + sizeof(Two) + ALIGNED_LENGTH(item->klen + sizeof(ObjectID));
+			alignedKlen = ALIGNED_LENGTH(item->klen + sizeof(ObjectID));
 			fpage->slot[-i] = fEntryOffset;
-			memcpy(&fpage->data[fEntryOffset], 
-			*/
-		}
-		i++;
-	}
-	
-	for(i = 0; i < maxLoop; i++)
-	{
-		sum += (sizeof(Two) + sizeof(Two) + sizeof(Two));
-		if(i == high + 1)
-		{
-			sum +=  ALIGNED_LENGTH(sizeof(ObjectID) + item->klen);
-			flag = TRUE;
-		}
-		else if(i < high + 1)
-		{
-			fEntry = &fpage->data[fpage->slot[-i]];
-			sum += ALIGNED_LENGTH(sizeof(ObjectID) + fEntry->klen);
+			fEntry->nObjects = 1;
+			fEntry->klen = item->klen;
+			memcpy(fEntry->kval, item->kval, alignedKlen);
 		}
 		else if(i > high + 1)
 		{
-			fEntry = &fpage->data[fpage->slot[-(i-1)]];
-			sum += ALIGNED_LENGTH(sizeof(ObjectID) + fEntry->klen);
+			itemEntry = &tpage.data[tpage.slot[-(i-1)]];
+			entryLen = sizeof(Two) + sizeof(Two) + ALIGNED_LENGTH(itemEntry->klen + sizeof(ObjectID));
+			fpage->slot[-(i-1)] = fEntryOffset;
+			memcpy(fEntry, itemEntry, entryLen);
 		}
-
-		if(sum >= BL_HALF)
-			break;
+		fEntryOffset += entryLen;
+		sum += (entryLen + sizeof(Two));
+		i++;
 	}
-	j = i;
 
-	e = BfM_GetTrain((TrainID*)&newPid, (char**)&npage, PAGE_BUF);
+	j = i;
+	fpage->hdr.nSlots = j;
+	fpage->hdr.free = fEntryOffset;
+	fpage->hdr.unused = 0;
+
+	e = BfM_GetTrain(&newPid, (char**)&npage, PAGE_BUF);
 	if(e < 0) ERR(e);
-    
+
+	k = 0;
+	nEntryOffset = 0;
+	i++;
+	while(i < maxLoop)
+	{
+		nEntry = &npage->data[nEntryOffset];
+		if(i < (high + 1))
+		{
+			itemEntry = &tpage.data[tpage.slot[-i]];
+			entryLen = sizeof(Two) + sizeof(Two) + ALIGNED_LENGTH(itemEntry->klen + sizeof(ObjectID));
+			npage->slot[-k] = nEntryOffset;
+			memcpy(nEntry, itemEntry, entryLen);
+		}
+		else if(i == (high + 1))
+		{
+			entryLen = sizeof(Two) + sizeof(Two) + ALIGNED_LENGTH(item->klen + sizeof(ObjectID));
+			alignedKlen = ALIGNED_LENGTH(item->klen + sizeof(ObjectID));
+			npage->slot[-k] = nEntryOffset;
+			nEntry->nObjects = 1;
+			nEntry->klen = item->klen;
+			memcpy(nEntry->kval, item->kval, alignedKlen);
+		}
+		else if(i > high + 1)
+		{
+			itemEntry = &tpage.data[tpage.slot[-(i-1)]];
+			entryLen = sizeof(Two) + sizeof(Two) + ALIGNED_LENGTH(itemEntry->klen + sizeof(ObjectID));
+			npage->slot[-(k-1)] = nEntryOffset;
+			memcpy(nEntry, itemEntry, entryLen);
+		}
+		nEntryOffset += entryLen;
+		k++;
+		i++;
+	} 
+	npage->hdr.nSlots = k;
+	npage->hdr.free = nEntryOffset;
+	npage->hdr.unused = 0;
+
+	MAKE_PAGEID(nextPid, root->volNo, fpage->hdr.nextPage);
+	e = BfM_GetTrain(&nextPid, (char**)&mpage, PAGE_BUF);
+	if(e < 0) ERR(e);
+
+	npage->hdr.nextPage = mpage->hdr.pid.pageNo;
+	npage->hdr.prevPage = fpage->hdr.pid.pageNo;
+
+	fpage->hdr.nextPage = npage->hdr.pid.pageNo;
+	mpage->hdr.prevPage = npage->hdr.pid.pageNo;
+
+	nEntry = &npage->data[npage->slot[0]];
+	ritem->spid = npage->hdr.pid.pageNo;
+	ritem->klen = nEntry->klen;
+	memcpy(ritem->kval, nEntry->kval, nEntry->klen);
+
+	if(fpage->hdr.type & ROOT)
+	{
+		fpage->hdr.type &= ~ROOT;
+	}
+
+	e = BfM_SetDirty(root, PAGE_BUF);
+	if(e < 0) ERRB1(e, root, PAGE_BUF);
+	e = BfM_SetDirty(&newPid, PAGE_BUF);
+	if(e < 0) ERRB1(e, &newPid, PAGE_BUF);
+	e = BfM_SetDirty(&nextPid, PAGE_BUF);
+	if(e < 0) ERRB1(e, &nextPid, PAGE_BUF);
+
+	e = BfM_FreeTrain(&newPid, PAGE_BUF);
+	if(e < 0) ERR(e);
+	e = BfM_FreeTrain(&nextPid, PAGE_BUF);
+	if(e < 0) ERR(e);
 
     return(eNOERROR);
     
