@@ -135,5 +135,48 @@ Boolean edubtm_BinarySearchLeaf(
             ERR(eNOTSUPPORTED_EDUBTM);
     }
 
+	if(lpage->hdr.nSlots == 0)
+	{
+		*idx = -1;
+		return FALSE;
+	}
+
+	high = lpage->hdr.nSlots - 1;
+	low = 0;
+
+	while(low != high)
+	{
+		mid = low + (high - low) / 2;
+		entry = lpage->data[lpage->slot[-mid]];
+		cmp = edubtm_KeyCompare(kdesc, kval, entry + sizeof(Two));
+		if(cmp == GREAT)
+			low = mid + 1;
+		else if(cmp == LESS)
+			high = mid;
+		else if(cmp == EQUAL)
+		{
+			*idx = mid;
+			return TRUE;
+		}
+	}
+
+	entry = lpage->data[lpage->slot[-low]];
+	cmp = edubtm_KeyCompare(kdesc, kval, entry + sizeof(Two));
+	if(cmp == GREAT)
+		*idx = low;
+	else if(cmp == LESS)
+	{
+		if(low == 0)
+			*idx = -1;
+		else
+			*idx = (low - 1);
+	}
+	else if(cmp == EQUAL)
+	{
+		*idx = low;
+		return TRUE;
+	}
+		
+	return FALSE;
     
 } /* edubtm_BinarySearchLeaf() */
