@@ -88,6 +88,43 @@ Boolean edubtm_BinarySearchInternal(
             ERR(eNOTSUPPORTED_EDUBTM);
     }
 
+	high = ipage->hdr.nSlots - 1;
+	low = 0;
+
+	while(low != high)
+	{
+		mid = low + (high - low) / 2;
+		entry = ipage->data[ipage->slot[-mid]];
+		cmp = edubtm_KeyCompare(kdesc, kval, entry + sizeof(ShortPageID));
+		if(cmp == GREAT)
+			low = mid + 1;
+		else if(cmp == LESS)
+			high = mid;
+		else if(cmp == EQUAL)
+		{
+			*idx = mid;
+			return TRUE;
+		}
+	}
+
+	entry = ipage->data[ipage->slot[-low]];
+	cmp = edubtm_KeyCompare(kdesc, kval, entry + sizeof(ShortPageID));
+	if(cmp == GREAT)
+		*idx = low;
+	else if(cmp == LESS)
+	{
+		if(low == 0)
+			*idx = -1;
+		else
+			*idx = (low - 1);
+	}
+	else if(cmp == EQUAL)
+	{
+		*idx = low;
+		return TRUE;
+	}
+		
+	return FALSE;
     
 } /* edubtm_BinarySearchInternal() */
 
