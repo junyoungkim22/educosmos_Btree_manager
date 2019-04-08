@@ -102,7 +102,7 @@ Four edubtm_FreePages(
 
 	e = Util_getElementFromPool(dlPool, &dlElem);
 	if(e < 0) ERR(e);
-	dElem->type = DL_PAGE;
+	dlElem->type = DL_PAGE;
 	dlElem->elem.pid = *curPid;
 	dlElem->next = dlHead->next;
 	dlHead->next = dlElem;
