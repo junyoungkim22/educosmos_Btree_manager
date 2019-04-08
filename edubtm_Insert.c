@@ -186,8 +186,45 @@ Four edubtm_InsertLeaf(
     
     /*@ Initially the flags are FALSE */
     *h = *f = FALSE;
-    
 
+	found = edubtm_BinarySearchLeaf(page, kdesc, kval, &idx);
+	if(found)
+		return eDUPLICATEDKEY_BTM;
+	
+	alignedKlen = ALIGNED_LENGTH(kval->len);
+	entryLen = sizeof(Two) + sizeof(Two) + alignedKlen + sizeof(ObjectID);
+
+	if(BL_FREE(page) >= (entryLen + sizeof(Two)))
+	{
+		if(BL_CFREE(page) < entryLen + sizeof(Two))
+		{
+			edubtm_CompactLeafPage(page, NIL);
+		}
+		entry = &page->data[page->hdr.free];
+		entry->nObjects = 1;
+		entry->klen = kval->len;
+		memcpy(entry->kval, kval->val, entry->klen);
+		oidArray = entry + sizeof(Two) + sizeof(Two) + alignedKlen;
+		oidArray[0].volNo = oid->volNo;
+		oidArray[0].pageNo = oid->pageNo;
+		for(i = page->hdr.nSlots; i >= idx + 2; i--)
+		{
+			page->slot[-i] = page->slot[-(i-1)];
+		}
+		page->slot[-(idx + 1)] = page->hdr.free;
+		page->hdr.free += entryLen;
+		page->hdr.nSlots++;
+	}
+	else
+	{
+		*h = TRUE;
+		leaf.oid = *oid;
+		leaf.nObjects = 1;
+		leaf.klen = kval->len;
+		memcpy(leaf.kval, kval->val, leaf.klen);
+		e = edubtm_SplitLeaf(catObjForFile, pid, page, idx, &leaf, item);
+		if(e < 0) ERR(e);
+	}
 
     return(eNOERROR);
     
