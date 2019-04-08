@@ -369,15 +369,20 @@ Four edubtm_SplitLeaf(
 	npage->hdr.free = nEntryOffset;
 	npage->hdr.unused = 0;
 
-	MAKE_PAGEID(nextPid, root->volNo, fpage->hdr.nextPage);
-	e = BfM_GetTrain(&nextPid, (char**)&mpage, PAGE_BUF);
-	if(e < 0) ERR(e);
-
-	npage->hdr.nextPage = mpage->hdr.pid.pageNo;
+	if(fpage->hdr.nextPage != NIL)
+	{
+		MAKE_PAGEID(nextPid, root->volNo, fpage->hdr.nextPage);
+		e = BfM_GetTrain(&nextPid, (char**)&mpage, PAGE_BUF);
+		if(e < 0) ERR(e);
+		mpage->hdr.prevPage = npage->hdr.pid.pageNo;
+		e = BfM_SetDirty(&nextPid, PAGE_BUF);
+		if(e < 0) ERRB1(e, &nextPid, PAGE_BUF);
+		e = BfM_FreeTrain(&nextPid, PAGE_BUF);
+		if(e < 0) ERR(e);
+	}
+	npage->hdr.nextPage = fpage->hdr.nextPage;
 	npage->hdr.prevPage = fpage->hdr.pid.pageNo;
-
 	fpage->hdr.nextPage = npage->hdr.pid.pageNo;
-	mpage->hdr.prevPage = npage->hdr.pid.pageNo;
 
 	nEntry = &npage->data[npage->slot[0]];
 	ritem->spid = npage->hdr.pid.pageNo;
@@ -393,12 +398,8 @@ Four edubtm_SplitLeaf(
 	if(e < 0) ERRB1(e, root, PAGE_BUF);
 	e = BfM_SetDirty(&newPid, PAGE_BUF);
 	if(e < 0) ERRB1(e, &newPid, PAGE_BUF);
-	e = BfM_SetDirty(&nextPid, PAGE_BUF);
-	if(e < 0) ERRB1(e, &nextPid, PAGE_BUF);
 
 	e = BfM_FreeTrain(&newPid, PAGE_BUF);
-	if(e < 0) ERR(e);
-	e = BfM_FreeTrain(&nextPid, PAGE_BUF);
 	if(e < 0) ERR(e);
 
     return(eNOERROR);

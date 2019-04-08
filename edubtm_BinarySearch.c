@@ -184,7 +184,7 @@ Boolean edubtm_BinarySearchLeaf(
 	while(low != high)
 	{
 		mid = low + (high - low) / 2;
-		entry = lpage->data[lpage->slot[-mid]];
+		entry = &lpage->data[lpage->slot[-mid]];
 		cmp = edubtm_KeyCompare(kdesc, kval, entry + sizeof(Two));
 		if(cmp == GREAT)
 			low = mid + 1;
@@ -197,7 +197,7 @@ Boolean edubtm_BinarySearchLeaf(
 		}
 	}
 
-	entry = lpage->data[lpage->slot[-low]];
+	entry = &lpage->data[lpage->slot[-low]];
 	cmp = edubtm_KeyCompare(kdesc, kval, entry + sizeof(Two));
 	if(cmp == GREAT)
 		*idx = low;
