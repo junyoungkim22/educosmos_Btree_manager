@@ -92,6 +92,45 @@ Four edubtm_KeyCompare(
             ERR(eNOTSUPPORTED_EDUBTM);
     }
 
+	left = key1->val;
+	right = key2->val;
+	for(i = 0; i < kdesc->nparts; i++)
+	{
+		if(kdesc->kpart[i].type == SM_INT)
+		{
+			memcpy(&l1, left, sizeof(int));
+			memcpy(&l2, right, sizeof(int));
+			if(l1 > l2)
+				return GREAT;
+			else if(l1 < l2)
+				return LESS;
+			left += kdesc->kpart[i].length;
+			right += kdesc->kpart[i].length;
+		}
+		else if(kdesc->kpart[i].type == SM_VARSTRING)
+		{
+			memcpy(&len1, left, sizeof(Two));
+			memcpy(&len2, right, sizeof(Two));
+			left += sizeof(Two);
+			right += sizeof(Two);
+			for(j = 0; j < MIN(len1, len2); j++)
+			{
+				if(left[j] > right[j])
+					return GREAT;
+				else if(left[j] < right[j])
+					return LESS;
+			}
+			
+			if(len1 > len2)
+				return GREAT;
+			else if(len1 < len2)
+				return LESS;
+
+			left += len1;
+			right += len2;
+		}
+	}
+
         
     return(EQUAL);
     
