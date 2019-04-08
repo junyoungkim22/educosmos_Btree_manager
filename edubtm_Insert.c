@@ -117,6 +117,41 @@ Four edubtm_Insert(
             ERR(eNOTSUPPORTED_EDUBTM);
     }
 
+	e = BfM_GetTrain(root, (char**)&apage, PAGE_BUF);
+	if(e < 0) ERR(e);
+
+	if(apage->any.hdr.type & INTERNAL)
+	{
+		edubtm_BinarySearchInternal(&apage->bi, kdesc, kval, &idx);
+		if(idx == -1)
+			MAKE_PAGEID(newPid, apage->any.hdr.pid.volNo, apage->bi.hdr.p0);
+		else
+		{
+			iEntry = &apage->bi.data[apage->bi.slot[-idx]];
+			MAKE_PAGEID(newPid, apage->any.hdr.pid.volNo, iEntry->spid);
+		}
+		e = edubtm_Insert(catObjForFile, &newPid, kdesc, kval, oid, &lf, &lh, &litem, dlPool, dlHead);
+		if(e < 0) ERR(e);
+
+		if(lh)
+		{
+			tKey.len = litem.klen;
+			memcpy(tKey.val, litem.kval, tKey.len);
+			edubtm_BinarySearchInternal(&apage->bi, kdesc, &tKey, &idx);
+			e = edubtm_InsertInternal(catObjForFile, apage, &litem, idx, h, item);
+			if(e < 0) ERR(e);
+		}
+	}
+	else if(apage->any.hdr.type & LEAF)
+	{
+		e = edubtm_InsertLeaf(catObjForFile, root, apage, kdesc, kval, oid, f, h, item);
+		if(e < 0) ERR(e);
+	}
+
+	e = BfM_SetDirty(root, PAGE_BUF);
+	if(e < 0) ERRB1(e, root, PAGE_BUF);
+	e = BfM_FreeTrain(root, PAGE_BUF);
+	if(e < 0) ERR(e);
     
     return(eNOERROR);
     

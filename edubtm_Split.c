@@ -286,8 +286,6 @@ Four edubtm_SplitLeaf(
 	e = edubtm_InitLeaf(&newPid, FALSE, isTmp);
    	if(e < 0) ERR(e); 
 
-	e = 
-
 	maxLoop = fpage->hdr.nSlots + 1;
 
 	memcpy(&tpage, fpage, PAGESIZE);
