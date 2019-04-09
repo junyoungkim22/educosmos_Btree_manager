@@ -97,6 +97,8 @@ Four EduBtM_InsertObject(
             ERR(eNOTSUPPORTED_EDUBTM);
     }
     
+	lh = lf = FALSE;
+
 	e = edubtm_Insert(catObjForFile, root, kdesc, kval, oid, &lf, &lh, &item, dlPool, dlHead);
 	if(e < 0) ERR(e);
 
