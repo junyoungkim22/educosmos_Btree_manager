@@ -306,11 +306,12 @@ Four edubtm_SplitLeaf(
 		else if(i == (high + 1))
 		{
 			entryLen = sizeof(Two) + sizeof(Two) + ALIGNED_LENGTH(item->klen + sizeof(ObjectID));
-			alignedKlen = ALIGNED_LENGTH(item->klen + sizeof(ObjectID));
+			alignedKlen = ALIGNED_LENGTH(item->klen);
 			fpage->slot[-i] = fEntryOffset;
 			fEntry->nObjects = 1;
 			fEntry->klen = item->klen;
 			memcpy(fEntry->kval, item->kval, alignedKlen);
+			memcpy(fEntry->kval + alignedKlen, &item->oid, sizeof(ObjectID));
 		}
 		else if(i > high + 1)
 		{
@@ -334,7 +335,6 @@ Four edubtm_SplitLeaf(
 
 	k = 0;
 	nEntryOffset = 0;
-	i++;
 	while(i < maxLoop)
 	{
 		nEntry = &npage->data[nEntryOffset];
@@ -348,11 +348,12 @@ Four edubtm_SplitLeaf(
 		else if(i == (high + 1))
 		{
 			entryLen = sizeof(Two) + sizeof(Two) + ALIGNED_LENGTH(item->klen + sizeof(ObjectID));
-			alignedKlen = ALIGNED_LENGTH(item->klen + sizeof(ObjectID));
+			alignedKlen = ALIGNED_LENGTH(item->klen);
 			npage->slot[-k] = nEntryOffset;
 			nEntry->nObjects = 1;
 			nEntry->klen = item->klen;
 			memcpy(nEntry->kval, item->kval, alignedKlen);
+			memcpy(nEntry->kval + alignedKlen, &item->oid, sizeof(ObjectID));
 		}
 		else if(i > high + 1)
 		{

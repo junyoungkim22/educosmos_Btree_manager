@@ -241,9 +241,8 @@ Four edubtm_InsertLeaf(
 		entry->nObjects = 1;
 		entry->klen = kval->len;
 		memcpy(entry->kval, kval->val, entry->klen);
-		oidArray = entry + sizeof(Two) + sizeof(Two) + alignedKlen;
-		oidArray[0].volNo = oid->volNo;
-		oidArray[0].pageNo = oid->pageNo;
+		oidArray = entry->kval + alignedKlen;
+		oidArray[0] = *oid;
 		for(i = page->hdr.nSlots; i >= idx + 2; i--)
 		{
 			page->slot[-i] = page->slot[-(i-1)];

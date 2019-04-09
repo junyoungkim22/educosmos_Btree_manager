@@ -90,6 +90,7 @@ Four edubtm_root_insert(
 	if(e < 0) ERR(e);
 
 	memcpy(newPage, rootPage, PAGESIZE);
+	newPage->any.hdr.pid = newPid;
 
 	e = edubtm_InitInternal(root, TRUE, isTmp);
 	if(e < 0) ERR(e);
@@ -101,7 +102,7 @@ Four edubtm_root_insert(
 	memcpy(entry->kval, item->kval, entry->klen);
 	rootPage->bi.hdr.free += (sizeof(ShortPageID) + ALIGNED_LENGTH(sizeof(Two) + entry->klen));
 	rootPage->bi.hdr.nSlots++;
-	rootPage->bi.hdr.p0 = newPage->any.hdr.pid.pageNo; 
+	rootPage->bi.hdr.p0 = newPage->any.hdr.pid.pageNo;
 
 	newPage->any.hdr.type &= ~ROOT;	
 	
