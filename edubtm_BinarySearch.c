@@ -95,11 +95,15 @@ Boolean edubtm_BinarySearchInternal(
 	{
 		mid = low + (high - low) / 2;
 		entry = &ipage->data[ipage->slot[-mid]];
-		cmp = edubtm_KeyCompare(kdesc, kval, entry + sizeof(ShortPageID));
+		cmp = edubtm_KeyCompare(kdesc, kval, &entry->klen);
 		if(cmp == GREAT)
+		{
 			low = mid + 1;
+		}
 		else if(cmp == LESS)
+		{
 			high = mid;
+		}
 		else if(cmp == EQUAL)
 		{
 			*idx = mid;
@@ -108,7 +112,7 @@ Boolean edubtm_BinarySearchInternal(
 	}
 
 	entry = &ipage->data[ipage->slot[-low]];
-	cmp = edubtm_KeyCompare(kdesc, kval, entry + sizeof(ShortPageID));
+	cmp = edubtm_KeyCompare(kdesc, kval, &entry->klen);
 	if(cmp == GREAT)
 		*idx = low;
 	else if(cmp == LESS)
@@ -185,7 +189,7 @@ Boolean edubtm_BinarySearchLeaf(
 	{
 		mid = low + (high - low) / 2;
 		entry = &lpage->data[lpage->slot[-mid]];
-		cmp = edubtm_KeyCompare(kdesc, kval, entry + sizeof(Two));
+		cmp = edubtm_KeyCompare(kdesc, kval, &entry->klen);
 		if(cmp == GREAT)
 			low = mid + 1;
 		else if(cmp == LESS)
@@ -198,7 +202,7 @@ Boolean edubtm_BinarySearchLeaf(
 	}
 
 	entry = &lpage->data[lpage->slot[-low]];
-	cmp = edubtm_KeyCompare(kdesc, kval, entry + sizeof(Two));
+	cmp = edubtm_KeyCompare(kdesc, kval, &entry->klen);
 	if(cmp == GREAT)
 		*idx = low;
 	else if(cmp == LESS)

@@ -230,6 +230,7 @@ Four edubtm_InsertLeaf(
 	
 	alignedKlen = ALIGNED_LENGTH(kval->len);
 	entryLen = sizeof(Two) + sizeof(Two) + alignedKlen + sizeof(ObjectID);
+	printf("index: %d\n", idx);
 
 	if(BL_FREE(page) >= (entryLen + sizeof(Two)))
 	{
