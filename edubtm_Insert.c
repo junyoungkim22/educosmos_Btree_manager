@@ -119,12 +119,14 @@ Four edubtm_Insert(
 
 	e = BfM_GetTrain(root, (char**)&apage, PAGE_BUF);
 	if(e < 0) ERR(e);
-
+	
 	if(apage->any.hdr.type & INTERNAL)
 	{
 		edubtm_BinarySearchInternal(&apage->bi, kdesc, kval, &idx);
 		if(idx == -1)
+		{
 			MAKE_PAGEID(newPid, apage->any.hdr.pid.volNo, apage->bi.hdr.p0);
+		}
 		else
 		{
 			iEntry = &apage->bi.data[apage->bi.slot[-idx]];

@@ -94,7 +94,7 @@ Boolean edubtm_BinarySearchInternal(
 	while(low != high)
 	{
 		mid = low + (high - low) / 2;
-		entry = ipage->data[ipage->slot[-mid]];
+		entry = &ipage->data[ipage->slot[-mid]];
 		cmp = edubtm_KeyCompare(kdesc, kval, entry + sizeof(ShortPageID));
 		if(cmp == GREAT)
 			low = mid + 1;
@@ -107,7 +107,7 @@ Boolean edubtm_BinarySearchInternal(
 		}
 	}
 
-	entry = ipage->data[ipage->slot[-low]];
+	entry = &ipage->data[ipage->slot[-low]];
 	cmp = edubtm_KeyCompare(kdesc, kval, entry + sizeof(ShortPageID));
 	if(cmp == GREAT)
 		*idx = low;
