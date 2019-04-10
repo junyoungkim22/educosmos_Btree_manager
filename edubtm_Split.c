@@ -145,6 +145,8 @@ Four edubtm_SplitInternal(
 	npage->hdr.p0 = fEntry->spid;
 
 	ritem->spid = npage->hdr.pid.pageNo;
+	ritem->klen = fEntry->klen;
+	memcpy(ritem->kval, fEntry->kval, ritem->klen);
 	
 	nEntryOffset = 0;
 	k = 0;
@@ -355,17 +357,18 @@ Four edubtm_SplitLeaf(
 			memcpy(nEntry->kval, item->kval, alignedKlen);
 			memcpy(nEntry->kval + alignedKlen, &item->oid, sizeof(ObjectID));
 		}
-		else if(i > high + 1)
+		else if(i > (high + 1))
 		{
 			itemEntry = &tpage.data[tpage.slot[-(i-1)]];
 			entryLen = sizeof(Two) + sizeof(Two) + ALIGNED_LENGTH(itemEntry->klen + sizeof(ObjectID));
-			npage->slot[-(k-1)] = nEntryOffset;
+			npage->slot[-k] = nEntryOffset;
 			memcpy(nEntry, itemEntry, entryLen);
 		}
 		nEntryOffset += entryLen;
 		k++;
 		i++;
 	} 
+	
 	npage->hdr.nSlots = k;
 	npage->hdr.free = nEntryOffset;
 	npage->hdr.unused = 0;

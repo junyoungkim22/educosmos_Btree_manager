@@ -86,7 +86,7 @@ Four edubtm_root_insert(
 	e = BfM_GetNewTrain(&newPid, (char**)&newPage, PAGE_BUF);
 	if(e < 0) ERR(e);
 
-	e = BfM_GetNewTrain(root, (char**)&rootPage, PAGE_BUF);
+	e = BfM_GetTrain(root, (char**)&rootPage, PAGE_BUF);
 	if(e < 0) ERR(e);
 
 	memcpy(newPage, rootPage, PAGESIZE);

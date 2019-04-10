@@ -81,7 +81,7 @@ Four edubtm_FreePages(
     btm_LeafEntry       *lEntry;        /* a leaf entry */
     DeallocListElem     *dlElem;        /* an element of dealloc list */
 
-	e = BfM_GetTrain(curPid, (char**)&apage, PAGE_BUF);
+	e = BfM_GetNewTrain(curPid, (char**)&apage, PAGE_BUF);
 	if(e < 0) ERR(e);
 
 	if(apage->any.hdr.type & INTERNAL)
@@ -91,14 +91,14 @@ Four edubtm_FreePages(
 		if(e < 0) ERR(e);
 		for(i = 0; i < apage->bi.hdr.nSlots; i++)
 		{
-			iEntry = apage->bi.data[apage->bi.slot[-i]];
+			iEntry = &apage->bi.data[apage->bi.slot[-i]];
 			MAKE_PAGEID(tPid, pFid->volNo, iEntry->spid);
 			e = edubtm_FreePages(pFid, &tPid, dlPool, dlHead);
 			if(e < 0) ERR(e);
 		}
 	}
 
-	apage->any.hdr.type = FREEPAGE;
+	apage->any.hdr.type &= FREEPAGE;
 
 	e = Util_getElementFromPool(dlPool, &dlElem);
 	if(e < 0) ERR(e);
