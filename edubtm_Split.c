@@ -319,7 +319,7 @@ Four edubtm_SplitLeaf(
 		{
 			itemEntry = &tpage.data[tpage.slot[-(i-1)]];
 			entryLen = sizeof(Two) + sizeof(Two) + ALIGNED_LENGTH(itemEntry->klen + sizeof(ObjectID));
-			fpage->slot[-(i-1)] = fEntryOffset;
+			fpage->slot[-i] = fEntryOffset;
 			memcpy(fEntry, itemEntry, entryLen);
 		}
 		fEntryOffset += entryLen;
