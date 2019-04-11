@@ -124,15 +124,65 @@ Four edubtm_Delete(
         if(kdesc->kpart[i].type!=SM_INT && kdesc->kpart[i].type!=SM_VARSTRING)
             ERR(eNOTSUPPORTED_EDUBTM);
     }
+ 
+    *h = *f = FALSE;    
 
-        
-    *h = *f = FALSE;
-    
-    
-    /* Delete following 2 lines before implement this function */
-    printf("Implementation of delete operation is optional (not compulsory),\n");
-    printf("and delete operation has not been implemented yet.\n");
+	e = BfM_GetTrain((TrainID*)catObjForFile, (char**)&catPage, PAGE_BUF);
+	if(e < 0) ERR(e);
+	GET_PTR_TO_CATENTRY_FOR_BTREE(catObjForFile, catPage, catEntry);
+	MAKE_PHYSICALFILEID(pFid, catEntry->fid.volNo, catEntry->firstPage);
 
+	e = BfM_GetTrain(root, (char**)&rpage, PAGE_BUF);
+	if(e < 0) ERR(e);
+
+	if(rpage->any.hdr.type & INTERNAL)
+	{
+		edubtm_BinarySearchInternal(&rpage->bi, kdesc, kval, &idx);
+		if(idx == -1)
+		{
+			MAKE_PAGEID(child, rpage->any.hdr.pid.volNo, rpage->bi.hdr.p0);
+		}
+		else
+		{
+			iEntry = &rpage->bi.data[rpage->bi.slot[-idx]];
+			MAKE_PAGEID(child, rpage->any.hdr.pid.volNo, iEntry->spid);
+		}
+		e = edubtm_Delete(catObjForFile, &child, kdesc, kval, oid, &lf, &lh, &litem, dlPool, dlHead);
+
+		if(lh)
+		{
+			tKey.len = litem.klen;
+			memcpy(tKey.val, litem.kval, tKey.len);
+			edubtm_BinarySearchInternal(&rpage->bi, kdesc, &tKey, &idx);
+			e = edubtm_InsertInternal(catObjForFile, rpage, &litem, idx, h, item);
+			if(e < 0) ERR(e);
+		}
+		else if(lf)
+		{
+			e = btm_Underflow(&pFid, rpage, &child, idx, f, &lh, &litem, dlPool, dlHead);
+			if(e < 0) ERRB1(e, root, PAGE_BUF);
+			if(lh)
+			{
+				tKey.len = litem.klen;
+				memcpy(tKey.val, litem.kval, tKey.len);
+				edubtm_BinarySearchInternal(&rpage->bi, kdesc, &tKey, &idx);
+				e = edubtm_InsertInternal(catObjForFile, rpage, &litem, idx, h, item);
+				if(e < 0) ERR(e);
+			}
+		}
+		if(e < 0) ERR(e);
+	}
+	else if(rpage->any.hdr.type & LEAF)
+	{
+		e = edubtm_DeleteLeaf(&pFid, root, &rpage->bl, kdesc, kval, oid, f, &lh, &litem, dlPool, dlHead);
+		if(e < 0) ERR(e);
+	}
+	
+	e = BfM_FreeTrain(root, PAGE_BUF);
+	if(e < 0) ERR(e);
+
+	e = BfM_FreeTrain((TrainID*)catObjForFile, PAGE_BUF);
+	if(e < 0) ERR(e);
 
     return(eNOERROR);
     
@@ -201,11 +251,44 @@ Four edubtm_DeleteLeaf(
             ERR(eNOTSUPPORTED_EDUBTM);
     }
 
+	*f = FALSE;
 
-    /* Delete following 2 lines before implement this function */
-    printf("Implementation of delete operation is optional (not compulsory),\n");
-    printf("and delete operation has not been implemented yet.\n");
+	found = edubtm_BinarySearchLeaf(apage, kdesc, kval, &idx);
 
+	if(!found)
+		ERR(eNOTFOUND_BTM);
+
+	lEntryOffset = apage->slot[-idx];
+	lEntry = &apage->data[lEntryOffset];
+	alignedKlen = ALIGNED_LENGTH(lEntry->klen);
+	oidArray = lEntry->kval + alignedKlen;
+	tOid = oidArray[0];
+
+	if(btm_ObjectIdComp(oid, &tOid) != EQUAL)
+		ERR(eNOTFOUND_BTM);
+
+	entryLen = sizeof(Two) + sizeof(Two) + alignedKlen + sizeof(ObjectID);
+
+	for(i = idx; i <= apage->hdr.nSlots - 2; i++)
+	{
+		apage->slot[-i] = apage->slot[-(i + 1)];
+	}
+
+	if((lEntryOffset + entryLen) == apage->hdr.free)
+	{
+		apage->hdr.free -= entryLen;
+	}
+	else
+	{
+		apage->hdr.unused += entryLen;
+	}
+	apage->hdr.nSlots--;
+
+	if(BI_FREE(apage) > BL_HALF)
+		*f = TRUE;
+
+	e = BfM_SetDirty(pid, PAGE_BUF);
+	if(e < 0) ERRB1(e, pid, PAGE_BUF);
 	      
     return(eNOERROR);
     
