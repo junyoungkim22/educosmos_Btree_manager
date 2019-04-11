@@ -159,6 +159,96 @@ Four edubtm_FetchNext(
             ERR(eNOTSUPPORTED_EDUBTM);
     }
 
+	leaf = current->leaf;
+
+	e = BfM_GetTrain(&leaf, (char**)&apage, PAGE_BUF);
+	if(e < 0) ERR(e);
+
+	if(compOp == SM_EQ || compOp == SM_LT || compOp == SM_LE)
+	{
+		if((apage->hdr.nSlots - 1) == current->slotNo)
+		{
+			if(apage->hdr.nextPage != NIL)
+			{
+				e = BfM_FreeTrain(&leaf, PAGE_BUF);
+				if(e < 0) ERR(e);
+				leaf.pageNo = apage->hdr.nextPage;
+				e = BfM_GetTrain(&leaf, (char**)&apage, PAGE_BUF);
+				if(e < 0) ERR(e);
+				entry = &apage->data[apage->slot[0]];
+			}
+			else
+			{
+				next->flag = CURSOR_EOS;
+				e = BfM_FreeTrain(&leaf, PAGE_BUF);
+				if(e < 0) ERR(e);
+    			return(eNOERROR);
+			}
+		}
+		else
+		{
+			entry = &apage->data[apage->slot[current->slotNo + 1]];
+		}
+	}
+	else
+	{
+		if(current->slotNo == 0)
+		{
+			if(apage->hdr.prevPage != NIL)
+			{
+				e = BfM_FreeTrain(&leaf, PAGE_BUF);
+				if(e < 0) ERR(e);
+				leaf.pageNo = apage->hdr.nextPage;
+				e = BfM_GetTrain(&leaf, (char**)&apage, PAGE_BUF);
+				if(e < 0) ERR(e);
+				entry = &apage->data[apage->slot[apage->hdr.nSlots - 1]];
+			}
+			else
+			{
+				next->flag = CURSOR_EOS;
+				e = BfM_FreeTrain(&leaf, PAGE_BUF);
+				if(e < 0) ERR(e);
+    			return(eNOERROR);
+			}
+		}
+		else
+		{
+			entry = &apage->data[apage->slot[current->slotNo - 1]];
+		}
+	}
+	
+	cmp = edubtm_KeyCompare(kdesc, &entry->klen, kval);
+	if(cmp == EQUAL)
+	{
+		if((compOp == SM_EQ) || (compOp == SM_LE) || (compOp == SM_GE))
+			next->flag = CURSOR_ON;
+		else 
+			next->flag = CURSOR_EOS;
+	}
+	else if(cmp == GREAT)
+	{
+		if((compOp == SM_GT) && (compOp == SM_GE))
+			next->flag = CURSOR_ON;
+		else 
+			next->flag = CURSOR_EOS;
+	}
+	else if(cmp == LESS)
+	{
+		if((compOp == SM_LT) && (compOp == SM_LE))
+			next->flag = CURSOR_ON;
+		else 
+			next->flag = CURSOR_EOS;
+	}
+
+	if(next->flag == CURSOR_EOS)
+    	return(eNOERROR);
+
+	alignedKlen = ALIGNED_LENGTH(entry->klen);
+	oidArray = entry->kval + alignedKlen;
+	next->oid = oidArray[0];
+	memcpy(&next->key, &entry->klen, sizeof(Two) + entry->klen);
+	next->leaf = leaf;
+	next->slotNo = next->oid.slotNo;
     
     return(eNOERROR);
     

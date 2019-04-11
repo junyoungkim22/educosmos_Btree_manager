@@ -109,7 +109,7 @@ Four edubtm_FirstObject(
 	lEntryOffset = apage->bl.slot[0];
 	lEntry = apage->bl.data[lEntryOffset];
 
-	cmp = edubtm_KeyCompare(kdesc, stopKval, lEntry->klen);
+	cmp = edubtm_KeyCompare(kdesc, stopKval, &lEntry->klen);
 	if((cmp == LESS) || (cmp == EQUAL && (stopCompOp == SM_LT)))
 	{
 		cursor->flag = CURSOR_EOS;
@@ -123,6 +123,9 @@ Four edubtm_FirstObject(
 		cursor->leaf = curPid;
 		cursor->slotNo = 0;
 	}
+
+	e = BfM_FreeTrain(&curPid, PAGE_BUF);
+	if(e < 0) ERR(e);
 
     return(eNOERROR);
     
