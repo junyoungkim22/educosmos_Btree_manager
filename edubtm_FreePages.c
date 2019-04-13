@@ -92,13 +92,13 @@ Four edubtm_FreePages(
 		for(i = 0; i < apage->bi.hdr.nSlots; i++)
 		{
 			iEntry = &apage->bi.data[apage->bi.slot[-i]];
-			MAKE_PAGEID(tPid, pFid->volNo, iEntry->spid);
+			MAKE_PAGEID(tPid, curPid->volNo, iEntry->spid);
 			e = edubtm_FreePages(pFid, &tPid, dlPool, dlHead);
 			if(e < 0) ERR(e);
 		}
 	}
 
-	apage->any.hdr.type &= FREEPAGE;
+	apage->any.hdr.type = FREEPAGE;
 
 	e = Util_getElementFromPool(dlPool, &dlElem);
 	if(e < 0) ERR(e);

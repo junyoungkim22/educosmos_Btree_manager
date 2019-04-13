@@ -133,7 +133,7 @@ Four edubtm_Insert(
 			MAKE_PAGEID(newPid, apage->any.hdr.pid.volNo, iEntry->spid);
 		}
 		e = edubtm_Insert(catObjForFile, &newPid, kdesc, kval, oid, &lf, &lh, &litem, dlPool, dlHead);
-		if(e < 0) ERR(e);
+		if(e < 0) ERRB1(e, root, PAGE_BUF);
 
 		if(lh)
 		{
@@ -147,7 +147,7 @@ Four edubtm_Insert(
 	else if(apage->any.hdr.type & LEAF)
 	{
 		e = edubtm_InsertLeaf(catObjForFile, root, apage, kdesc, kval, oid, f, h, item);
-		if(e < 0) ERR(e);
+		if(e < 0) ERRB1(e, root, PAGE_BUF);
 	}
 
 	e = BfM_SetDirty(root, PAGE_BUF);
@@ -226,7 +226,9 @@ Four edubtm_InsertLeaf(
 
 	found = edubtm_BinarySearchLeaf(page, kdesc, kval, &idx);
 	if(found)
+	{
 		return eDUPLICATEDKEY_BTM;
+	}
 	
 	alignedKlen = ALIGNED_LENGTH(kval->len);
 	entryLen = sizeof(Two) + sizeof(Two) + alignedKlen + sizeof(ObjectID);
