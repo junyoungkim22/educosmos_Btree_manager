@@ -93,8 +93,49 @@ Four edubtm_LastObject(
         if(kdesc->kpart[i].type!=SM_INT && kdesc->kpart[i].type!=SM_VARSTRING)
             ERR(eNOTSUPPORTED_EDUBTM);
     }
-    
 
+	e = BfM_GetTrain(root, (char**)&apage, PAGE_BUF);
+	if(e < 0) ERR(e);
+
+	cursor->flag = CURSOR_ON;
+
+	while(apage->any.hdr.type & INTERNAL)
+	{
+		iEntryOffset = apage->bi.slot[-(apage->bi.hdr.nSlots - 1)];
+		iEntry = &apage->bi.data[iEntryOffset];
+		curPid = apage->any.hdr.pid;
+		MAKE_PAGEID(child, curPid.volNo, iEntry->spid);
+		e = BfM_FreeTrain(&curPid, PAGE_BUF);
+		if(e < 0) ERR(e);
+		e = BfM_GetTrain(&child, (char**)&apage, PAGE_BUF);
+		if(e < 0) ERR(e);
+	}
+	curPid = child;
+
+	if(apage->bl.hdr.nSlots == 0)
+		cursor->flag = CURSOR_EOS;
+	lEntryOffset = apage->bl.slot[-(apage->bl.hdr.nSlots - 1)];
+	lEntry = &apage->bl.data[lEntryOffset];
+
+	if(cursor->flag != CURSOR_EOS)
+	{
+		cmp = edubtm_KeyCompare(kdesc, stopKval, &lEntry->klen);
+		if((cmp == GREAT) || (cmp == EQUAL && (stopCompOp == SM_GT)))
+			cursor->flag = CURSOR_EOS;
+		else
+		{
+			cursor->flag = CURSOR_ON;
+			alignedKlen = ALIGNED_LENGTH(lEntry->klen);
+			memcpy(&cursor->oid, &lEntry->kval[alignedKlen], sizeof(ObjectID));
+			memcpy(&cursor->key, &lEntry->klen, sizeof(Two) + lEntry->klen);
+			cursor->leaf = curPid;
+			cursor->slotNo = apage->bl.hdr.nSlots - 1;
+		}
+	}
+
+	e = BfM_FreeTrain(&curPid, PAGE_BUF);
+	if(e < 0) ERR(e);
+    
     return(eNOERROR);
     
 } /* edubtm_LastObject() */

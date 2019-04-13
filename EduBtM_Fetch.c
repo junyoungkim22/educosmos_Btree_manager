@@ -92,6 +92,22 @@ Four EduBtM_Fetch(
         if(kdesc->kpart[i].type!=SM_INT && kdesc->kpart[i].type!=SM_VARSTRING)
             ERR(eNOTSUPPORTED_EDUBTM);
     }
+
+	if(startCompOp == SM_BOF)
+	{
+		e = edubtm_FirstObject(root, kdesc, stopKval, stopCompOp, cursor);
+		if(e < 0) ERR(e);
+	}
+	else if(startCompOp == SM_EOF)
+	{
+		e = edubtm_LastObject(root, kdesc, stopKval, stopCompOp, cursor);
+		if(e < 0) ERR(e);
+	}
+	else
+	{
+		e = edubtm_Fetch(root, kdesc, startKval, startCompOp, stopKval, stopCompOp, cursor);
+		if(e < 0) ERR(e);
+	}
     
 
     return(eNOERROR);
@@ -158,6 +174,115 @@ Four edubtm_Fetch(
             ERR(eNOTSUPPORTED_EDUBTM);
     }
 
+	e = BfM_GetTrain(root, (char**)&apage, PAGE_BUF);
+	if(e < 0) ERR(e);
+
+	if(apage->any.hdr.type & INTERNAL)
+	{
+		found = edubtm_BinarySearchInternal(&apage->bi, kdesc, startKval, &idx);
+		if(idx == -1)
+		{
+			MAKE_PAGEID(child, apage->bi.hdr.pid.volNo, apage->bi.hdr.p0);
+		}
+		else
+		{
+			iEntryOffset = apage->bi.slot[-idx];
+			iEntry = &apage->bi.data[iEntryOffset];
+			MAKE_PAGEID(child, apage->bi.hdr.pid.volNo, iEntry->spid);
+		}
+		e = edubtm_Fetch(&child, kdesc, startKval, startCompOp, stopKval, stopCompOp, cursor);
+		if(e < 0) ERR(e);
+		e = BfM_FreeTrain(root, PAGE_BUF);
+		if(e < 0) ERR(e);
+		return(eNOERROR);
+	}
+	else if(apage->any.hdr.type & LEAF)
+	{
+		found = edubtm_BinarySearchLeaf(apage, kdesc, startKval, &idx);
+		leafPid = root;
+		slotNo = idx;
+		cursor->flag = CURSOR_ON;
+		if(startCompOp == SM_EQ)
+		{
+			if(!found)
+				cursor->flag = CURSOR_EOS;
+		}
+		else if((startCompOp == SM_LT) || (startCompOp == SM_LE))
+		{
+			if(found && (startCompOp == SM_LT))
+				slotNo--;
+			if(slotNo < 0)
+			{
+				if(apage->bl.hdr.prevPage != NIL)
+				{ 
+					e = BfM_FreeTrain(root, PAGE_BUF);
+					if(e < 0) ERR(e);
+					MAKE_PAGEID(prevPid, root->volNo, apage->bl.hdr.prevPage);
+					e = BfM_GetTrain(&prevPid, (char**)&apage, PAGE_BUF);
+					if(e < 0) ERR(e);
+					leafPid = &prevPid;
+					slotNo = apage->bl.hdr.nSlots - 1;
+				}
+				else
+					cursor->flag = CURSOR_EOS;
+			}
+		}
+		else if((startCompOp == SM_GT) || (startCompOp == SM_GE))
+		{
+			if(found && (startCompOp == SM_GT))
+				slotNo++;
+			if(slotNo > (apage->bl.hdr.nSlots - 1))
+			{
+				if(apage->bl.hdr.nextPage != NIL)
+				{ 
+					e = BfM_FreeTrain(root, PAGE_BUF);
+					if(e < 0) ERR(e);
+					MAKE_PAGEID(nextPid, root->volNo, apage->bl.hdr.nextPage);
+					e = BfM_GetTrain(&nextPid, (char**)&apage, PAGE_BUF);
+					if(e < 0) ERR(e);
+					leafPid = &nextPid;
+					slotNo = 0;
+				}
+				else
+					cursor->flag = CURSOR_EOS;
+			}
+		}
+
+		if(cursor->flag == CURSOR_ON)
+		{
+			lEntryOffset = apage->bl.slot[-slotNo];
+			lEntry = &apage->bl.data[lEntryOffset];
+			alignedKlen = ALIGNED_LENGTH(lEntry->klen);
+			oidArray = lEntry->kval + alignedKlen;
+			cursor->oid = oidArray[0];
+			memcpy(&cursor->key, &lEntry->klen, sizeof(Two) + lEntry->klen);
+			cursor->leaf = *leafPid;
+			cursor->slotNo = slotNo;
+		}
+
+		cmp = edubtm_KeyCompare(kdesc, &cursor->key, stopKval);
+		if(cmp == LESS)
+		{
+			if((stopCompOp == SM_GT) || (stopCompOp == SM_GE))
+				cursor->flag = CURSOR_EOS;
+		}
+		else if(cmp == EQUAL)
+		{
+			if((stopCompOp == SM_GT) || (stopCompOp == SM_LT))
+			{
+				cursor->flag = CURSOR_EOS;
+			}
+		}
+		else if(cmp == GREAT)
+		{
+			if((stopCompOp == SM_LT) || (stopCompOp == SM_LE))
+				cursor->flag = CURSOR_EOS;
+		}
+
+
+		e = BfM_FreeTrain(leafPid, PAGE_BUF);
+		if(e < 0) ERR(e);
+	}	
 
     return(eNOERROR);
     

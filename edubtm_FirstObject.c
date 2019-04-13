@@ -92,6 +92,8 @@ Four edubtm_FirstObject(
 
 	e = BfM_GetTrain(root, (char**)&apage, PAGE_BUF);
 	if(e < 0) ERR(e);
+
+	cursor->flag = CURSOR_ON;
    	
 	while(apage->any.hdr.type & INTERNAL)
 	{
@@ -107,21 +109,24 @@ Four edubtm_FirstObject(
 	if(apage->bl.hdr.nSlots == 0)
 		cursor->flag = CURSOR_EOS;
 	lEntryOffset = apage->bl.slot[0];
-	lEntry = apage->bl.data[lEntryOffset];
+	lEntry = &apage->bl.data[lEntryOffset];
 
-	cmp = edubtm_KeyCompare(kdesc, stopKval, &lEntry->klen);
-	if((cmp == LESS) || (cmp == EQUAL && (stopCompOp == SM_LT)))
+	if(cursor->flag != CURSOR_EOS)
 	{
-		cursor->flag = CURSOR_EOS;
-	}
-	else
-	{
-		cursor->flag = CURSOR_ON;
-		alignedKlen = ALIGNED_LENGTH(lEntry->klen);
-		memcpy(&cursor->oid, &lEntry->kval[alignedKlen], sizeof(ObjectID));
-		memcpy(&cursor->key, &lEntry->klen, sizeof(Two) + lEntry->klen);
-		cursor->leaf = curPid;
-		cursor->slotNo = 0;
+		cmp = edubtm_KeyCompare(kdesc, stopKval, &lEntry->klen);
+		if((cmp == LESS) || (cmp == EQUAL && (stopCompOp == SM_LT)))
+		{
+			cursor->flag = CURSOR_EOS;
+		}
+		else
+		{
+			cursor->flag = CURSOR_ON;
+			alignedKlen = ALIGNED_LENGTH(lEntry->klen);
+			memcpy(&cursor->oid, &lEntry->kval[alignedKlen], sizeof(ObjectID));
+			memcpy(&cursor->key, &lEntry->klen, sizeof(Two) + lEntry->klen);
+			cursor->leaf = curPid;
+			cursor->slotNo = 0;
+		}
 	}
 
 	e = BfM_FreeTrain(&curPid, PAGE_BUF);
