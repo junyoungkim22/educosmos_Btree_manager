@@ -290,50 +290,39 @@ Four edubtm_SplitLeaf(
 
 	maxLoop = fpage->hdr.nSlots + 1;
 
-	memcpy(&tpage, fpage, PAGESIZE);
+	flag = FALSE;
 
 	sum = 0;
-	i = 0;
-	fEntryOffset = 0;
-	while(sum < BL_HALF)
+	for(i = 0; i < maxLoop; i++)
 	{
-		fEntry = &fpage->data[fEntryOffset];
-		if(i < (high + 1))
+		if(i == (high + 1))
 		{
-			itemEntry = &tpage.data[tpage.slot[-i]];
-			entryLen = sizeof(Two) + sizeof(Two) + ALIGNED_LENGTH(itemEntry->klen + sizeof(ObjectID));
-			fpage->slot[-i] = fEntryOffset;
-			memcpy(fEntry, itemEntry, entryLen);
+			sum += sizeof(Two) + sizeof(Two) + ALIGNED_LENGTH(item->klen + sizeof(ObjectID));
+			flag = TRUE;
 		}
-		else if(i == (high + 1))
+		else if(i < (high + 1))
 		{
-			entryLen = sizeof(Two) + sizeof(Two) + ALIGNED_LENGTH(item->klen + sizeof(ObjectID));
-			alignedKlen = ALIGNED_LENGTH(item->klen);
-			fpage->slot[-i] = fEntryOffset;
-			fEntry->nObjects = 1;
-			fEntry->klen = item->klen;
-			memcpy(fEntry->kval, item->kval, alignedKlen);
-			memcpy(fEntry->kval + alignedKlen, &item->oid, sizeof(ObjectID));
+			itemEntry = &fpage->data[fpage->slot[-i]];
+			sum += sizeof(Two) + sizeof(Two) + ALIGNED_LENGTH(itemEntry->klen + sizeof(ObjectID));	
 		}
-		else if(i > high + 1)
+		else if(i > (high + 1))
 		{
-			itemEntry = &tpage.data[tpage.slot[-(i-1)]];
-			entryLen = sizeof(Two) + sizeof(Two) + ALIGNED_LENGTH(itemEntry->klen + sizeof(ObjectID));
-			fpage->slot[-i] = fEntryOffset;
-			memcpy(fEntry, itemEntry, entryLen);
+			itemEntry = &fpage->data[tpage.slot[-(i-1)]];
+			sum += sizeof(Two) + sizeof(Two) + ALIGNED_LENGTH(itemEntry->klen + sizeof(ObjectID));
 		}
-		fEntryOffset += entryLen;
-		sum += (entryLen + sizeof(Two));
-		i++;
+		sum += sizeof(Two);
+		if(sum >= BL_HALF)
+			break;
 	}
-
 	j = i;
-	fpage->hdr.nSlots = j;
-	fpage->hdr.free = fEntryOffset;
-	fpage->hdr.unused = 0;
+	//fpage->hdr.nSlots = j;
+	//fpage->hdr.free = fEntryOffset;
+	//fpage->hdr.unused = 0;
 
 	e = BfM_GetTrain(&newPid, (char**)&npage, PAGE_BUF);
 	if(e < 0) ERR(e);
+
+	i++;
 
 	k = 0;
 	nEntryOffset = 0;
@@ -342,10 +331,11 @@ Four edubtm_SplitLeaf(
 		nEntry = &npage->data[nEntryOffset];
 		if(i < (high + 1))
 		{
-			itemEntry = &tpage.data[tpage.slot[-i]];
+			itemEntry = &fpage->data[fpage->slot[-i]];
 			entryLen = sizeof(Two) + sizeof(Two) + ALIGNED_LENGTH(itemEntry->klen + sizeof(ObjectID));
 			npage->slot[-k] = nEntryOffset;
 			memcpy(nEntry, itemEntry, entryLen);
+			fpage->hdr.unused += entryLen;
 		}
 		else if(i == (high + 1))
 		{
@@ -359,15 +349,42 @@ Four edubtm_SplitLeaf(
 		}
 		else if(i > (high + 1))
 		{
-			itemEntry = &tpage.data[tpage.slot[-(i-1)]];
+			itemEntry = &fpage->data[fpage->slot[-(i-1)]];
 			entryLen = sizeof(Two) + sizeof(Two) + ALIGNED_LENGTH(itemEntry->klen + sizeof(ObjectID));
 			npage->slot[-k] = nEntryOffset;
 			memcpy(nEntry, itemEntry, entryLen);
+			fpage->hdr.unused += entryLen;
 		}
 		nEntryOffset += entryLen;
 		k++;
 		i++;
 	} 
+
+	if(flag)
+	{
+		fpage->hdr.nSlots = j;
+		entryLen = sizeof(Two) + sizeof(Two) + ALIGNED_LENGTH(item->klen + sizeof(ObjectID));
+		if(BL_CFREE(fpage) < (entryLen + sizeof(Two)))
+			edubtm_CompactLeafPage(fpage, NIL);
+		for(i = j; i >= high + 2; i--)
+		{
+			fpage->slot[-i] = fpage->slot[-(i-1)];
+		}
+		fpage->slot[-(high + 1)] = fpage->hdr.free;
+		fEntry = &fpage->data[fpage->hdr.free];
+		fEntry->nObjects = 1;
+		fEntry->klen = item->klen;
+		alignedKlen = ALIGNED_LENGTH(item->klen);
+		memcpy(fEntry->kval, item->kval, alignedKlen);
+		memcpy(fEntry->kval + alignedKlen, &item->oid, sizeof(ObjectID));
+		fpage->hdr.free += entryLen;
+		fpage->hdr.nSlots++;
+		
+	}
+	else
+	{
+		fpage->hdr.nSlots = j + 1;
+	}
 	
 	npage->hdr.nSlots = k;
 	npage->hdr.free = nEntryOffset;
@@ -406,6 +423,5 @@ Four edubtm_SplitLeaf(
 	e = BfM_FreeTrain(&newPid, PAGE_BUF);
 	if(e < 0) ERR(e);
 
-    return(eNOERROR);
-    
+    return(eNOERROR); 
 } /* edubtm_SplitLeaf() */
