@@ -147,7 +147,7 @@ void edubtm_CompactLeafPage(
 		{
 			entry = &tpage.data[tpage.slot[-i]];
 			alignedKlen = ALIGNED_LENGTH(entry->klen);
-			len = sizeof(entry->nObjects) + sizeof(entry->klen) + alignedKlen + sizeof(ObjectID);
+			len = sizeof(Two) + sizeof(Two) + alignedKlen + sizeof(ObjectID);
 			memcpy(&apage->data[apageDataOffset], &tpage.data[tpage.slot[-i]], len);
 			apageDataOffset += ALIGNED_LENGTH(len);
 		}
