@@ -331,11 +331,15 @@ Four edubtm_SplitLeaf(
 		nEntry = &npage->data[nEntryOffset];
 		if(i < (high + 1))
 		{
-			itemEntry = &fpage->data[fpage->slot[-i]];
+			fEntryOffset = fpage->slot[-i];
+			itemEntry = &fpage->data[fEntryOffset];
 			entryLen = sizeof(Two) + sizeof(Two) + ALIGNED_LENGTH(itemEntry->klen + sizeof(ObjectID));
 			npage->slot[-k] = nEntryOffset;
 			memcpy(nEntry, itemEntry, entryLen);
-			fpage->hdr.unused += entryLen;
+			if((fEntryOffset + entryLen) == fpage->hdr.free)
+				fpage->hdr.free -= entryLen;
+			else
+				fpage->hdr.unused += entryLen;
 		}
 		else if(i == (high + 1))
 		{
@@ -349,11 +353,15 @@ Four edubtm_SplitLeaf(
 		}
 		else if(i > (high + 1))
 		{
-			itemEntry = &fpage->data[fpage->slot[-(i-1)]];
+			fEntryOffset = fpage->slot[-(i-1)];
+			itemEntry = &fpage->data[fEntryOffset];
 			entryLen = sizeof(Two) + sizeof(Two) + ALIGNED_LENGTH(itemEntry->klen + sizeof(ObjectID));
 			npage->slot[-k] = nEntryOffset;
 			memcpy(nEntry, itemEntry, entryLen);
-			fpage->hdr.unused += entryLen;
+			if((fEntryOffset + entryLen) == fpage->hdr.free)
+				fpage->hdr.free -= entryLen;
+			else
+				fpage->hdr.unused += entryLen;
 		}
 		nEntryOffset += entryLen;
 		k++;

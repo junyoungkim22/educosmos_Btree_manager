@@ -223,6 +223,7 @@ Four edubtm_InsertLeaf(
     
     /*@ Initially the flags are FALSE */
     *h = *f = FALSE;
+	printf("free: %d\n", page->hdr.free);
 
 	found = edubtm_BinarySearchLeaf(page, kdesc, kval, &idx);
 	if(found)
@@ -255,6 +256,7 @@ Four edubtm_InsertLeaf(
 	}
 	else
 	{
+		printf("splitting..\n");
 		*h = TRUE;
 		leaf.oid = *oid;
 		leaf.nObjects = 1;
