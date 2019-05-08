@@ -373,7 +373,9 @@ Four edubtm_SplitLeaf(
 		fpage->hdr.nSlots = j;
 		entryLen = sizeof(Two) + sizeof(Two) + ALIGNED_LENGTH(item->klen + sizeof(ObjectID));
 		if(BL_CFREE(fpage) < (entryLen + sizeof(Two)))
+		{
 			edubtm_CompactLeafPage(fpage, NIL);
+		}
 		for(i = j; i >= high + 2; i--)
 		{
 			fpage->slot[-i] = fpage->slot[-(i-1)];

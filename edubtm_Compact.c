@@ -85,6 +85,7 @@ void edubtm_CompactInternalPage(
 			entry = &tpage.data[tpage.slot[-i]];
 			len = sizeof(entry->spid) + sizeof(entry->klen) + entry->klen;
 			memcpy(&apage->data[apageDataOffset], &tpage.data[tpage.slot[-i]], len);
+			apage->slot[-i] = apageDataOffset;
 			apageDataOffset += ALIGNED_LENGTH(len);
 		}
 	}
@@ -93,6 +94,7 @@ void edubtm_CompactInternalPage(
 		entry = &tpage.data[tpage.slot[-slotNo]];
 		len = sizeof(entry->spid) + sizeof(entry->klen) + entry->klen;
 		memcpy(&apage->data[apageDataOffset], &tpage.data[tpage.slot[-slotNo]], len);
+		apage->slot[-slotNo] = apageDataOffset;
 		apageDataOffset += ALIGNED_LENGTH(len);
 	}
 
@@ -149,6 +151,7 @@ void edubtm_CompactLeafPage(
 			alignedKlen = ALIGNED_LENGTH(entry->klen);
 			len = sizeof(Two) + sizeof(Two) + alignedKlen + sizeof(ObjectID);
 			memcpy(&apage->data[apageDataOffset], &tpage.data[tpage.slot[-i]], len);
+			apage->slot[-i] = apageDataOffset;
 			apageDataOffset += ALIGNED_LENGTH(len);
 		}
 	}
@@ -158,6 +161,7 @@ void edubtm_CompactLeafPage(
 		alignedKlen = ALIGNED_LENGTH(entry->klen);
 		len = sizeof(entry->nObjects) + sizeof(entry->klen) + alignedKlen + sizeof(ObjectID);
 		memcpy(&apage->data[apageDataOffset], &tpage.data[tpage.slot[-slotNo]], len);
+		apage->slot[-slotNo] = apageDataOffset;
 		apageDataOffset += ALIGNED_LENGTH(len);
 	}
 
