@@ -119,6 +119,8 @@ Four edubtm_Insert(
 
 	e = BfM_GetTrain(root, (char**)&apage, PAGE_BUF);
 	if(e < 0) ERR(e);
+
+	lh = FALSE;
 	
 	if(apage->any.hdr.type & INTERNAL)
 	{

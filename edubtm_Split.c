@@ -93,6 +93,8 @@ Four edubtm_SplitInternal(
     btm_InternalEntry           *nEntry;                /* internal entry in the new page, npage*/
     Boolean                     isTmp;
 
+	Two d;
+
 	e = btm_AllocPage(catObjForFile, &fpage->hdr.pid, &newPid);
 	if(e < 0) ERR(e);
 
@@ -147,7 +149,7 @@ Four edubtm_SplitInternal(
 	ritem->spid = npage->hdr.pid.pageNo;
 	ritem->klen = fEntry->klen;
 	memcpy(ritem->kval, fEntry->kval, ritem->klen);
-	
+
 	nEntryOffset = 0;
 	k = 0;
 	i++;
@@ -157,25 +159,38 @@ Four edubtm_SplitInternal(
 		nEntry = &npage->data[nEntryOffset];
 		if(i == high + 1)
 		{
+			entryLen = sizeof(ShortPageID) + ALIGNED_LENGTH(sizeof(Two) + item->klen);
 			nEntry->spid = item->spid;
 			nEntry->klen = item->klen;
 			memcpy(nEntry->kval, item->kval, item->klen);
 		}
 		else if(i < high + 1)
 		{
-			fEntry = &fpage->data[fpage->slot[-i]];
+			fEntryOffset = fpage->slot[-i];
+			fEntry = &fpage->data[fEntryOffset];
+			entryLen = sizeof(ShortPageID) + ALIGNED_LENGTH(sizeof(Two) + fEntry->klen);
 			nEntry->spid =  fEntry->spid;
 			nEntry->klen = fEntry->klen;
 			memcpy(nEntry->kval, fEntry->kval, fEntry->klen);
+			if((fEntryOffset + entryLen) == fpage->hdr.free)
+				fpage->hdr.free -= entryLen;
+			else
+				fpage->hdr.unused += entryLen;
 		}
 		else if(i > high + 1)
 		{
-			fEntry = &fpage->data[fpage->slot[-(i-1)]];
+			fEntryOffset = fpage->slot[-(i-1)];
+			fEntry = &fpage->data[fEntryOffset];
+			entryLen = sizeof(ShortPageID) + ALIGNED_LENGTH(sizeof(Two) + fEntry->klen);
 			nEntry->spid =  fEntry->spid;
 			nEntry->klen = fEntry->klen;
 			memcpy(nEntry->kval, fEntry->kval, fEntry->klen);
+			if((fEntryOffset + entryLen) == fpage->hdr.free)
+				fpage->hdr.free -= entryLen;
+			else
+				fpage->hdr.unused += entryLen;
 		}
-		nEntryOffset += sizeof(ShortPageID) + ALIGNED_LENGTH(sizeof(Two) + nEntry->klen);
+		nEntryOffset += entryLen;
 		i++;
 		k++;
 	}
@@ -186,24 +201,26 @@ Four edubtm_SplitInternal(
 	if(flag)
 	{
 		fpage->hdr.nSlots = j;
-		edubtm_CompactInternalPage(fpage, NIL);
+		entryLen = sizeof(ShortPageID) + ALIGNED_LENGTH(sizeof(Two) + fEntry->klen);
+		if(BI_CFREE(fpage) < (entryLen + sizeof(Two)))
+		{
+			edubtm_CompactInternalPage(fpage, NIL);
+		}
 		for(i = j; i >= high + 2; i--)
 		{
 			fpage->slot[-i] = fpage->slot[-(i-1)];
 		}
-		fpage->slot[-(high + 1)] = npage->hdr.free;
-		fEntry = &fpage->data[fpage->slot[-(high + 1)]];
+		fpage->slot[-(high + 1)] = fpage->hdr.free;
+		fEntry = &fpage->data[fpage->hdr.free];
 		fEntry->spid = item->spid;
 		fEntry->klen = item->klen;
 		memcpy(fEntry->kval, item->kval, fEntry->klen);
-		entryLen = sizeof(ShortPageID) + ALIGNED_LENGTH(sizeof(Two) + fEntry->klen);
-		npage->hdr.free += entryLen;
-		npage->hdr.nSlots++;
+		fpage->hdr.free += entryLen;
+		fpage->hdr.nSlots++;
 	}
 	else
 	{
 		fpage->hdr.nSlots = j + 1;
-		edubtm_CompactInternalPage(fpage, NIL);
 	}
 
 	if((fpage->hdr.type & ROOT) == ROOT)

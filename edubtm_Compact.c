@@ -83,8 +83,8 @@ void edubtm_CompactInternalPage(
 		if(i != slotNo)
 		{
 			entry = &tpage.data[tpage.slot[-i]];
-			len = sizeof(entry->spid) + sizeof(entry->klen) + entry->klen;
-			memcpy(&apage->data[apageDataOffset], &tpage.data[tpage.slot[-i]], len);
+			len = sizeof(ShortPageID) + ALIGNED_LENGTH(sizeof(Two) + entry->klen);
+			memcpy(&apage->data[apageDataOffset], &tpage.data[tpage.slot[-i]], len);	
 			apage->slot[-i] = apageDataOffset;
 			apageDataOffset += ALIGNED_LENGTH(len);
 		}
@@ -92,7 +92,7 @@ void edubtm_CompactInternalPage(
 	if(slotNo != NIL)
 	{
 		entry = &tpage.data[tpage.slot[-slotNo]];
-		len = sizeof(entry->spid) + sizeof(entry->klen) + entry->klen;
+		len = sizeof(ShortPageID) + ALIGNED_LENGTH(sizeof(Two) + entry->klen);
 		memcpy(&apage->data[apageDataOffset], &tpage.data[tpage.slot[-slotNo]], len);
 		apage->slot[-slotNo] = apageDataOffset;
 		apageDataOffset += ALIGNED_LENGTH(len);
