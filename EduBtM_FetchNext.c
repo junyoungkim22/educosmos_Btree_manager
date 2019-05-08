@@ -252,7 +252,11 @@ Four edubtm_FetchNext(
 	}
 
 	if(next->flag == CURSOR_EOS)
+	{
+		e = BfM_FreeTrain(&leaf, PAGE_BUF);
+		if(e < 0) ERR(e);
     	return(eNOERROR);
+	}
 
 	alignedKlen = ALIGNED_LENGTH(entry->klen);
 	oidArray = entry->kval + alignedKlen;
