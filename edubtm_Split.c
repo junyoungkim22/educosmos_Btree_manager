@@ -332,9 +332,6 @@ Four edubtm_SplitLeaf(
 			break;
 	}
 	j = i;
-	//fpage->hdr.nSlots = j;
-	//fpage->hdr.free = fEntryOffset;
-	//fpage->hdr.unused = 0;
 
 	e = BfM_GetTrain(&newPid, (char**)&npage, PAGE_BUF);
 	if(e < 0) ERR(e);

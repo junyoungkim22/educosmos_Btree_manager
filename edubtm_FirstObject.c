@@ -113,7 +113,12 @@ Four edubtm_FirstObject(
 
 	if(cursor->flag != CURSOR_EOS)
 	{
-		cmp = edubtm_KeyCompare(kdesc, stopKval, &lEntry->klen);
+		if(stopCompOp == SM_EOF)
+			cmp = GREAT;
+		else if(stopCompOp == SM_BOF)
+			cmp = EQUAL;
+		else
+			cmp = edubtm_KeyCompare(kdesc, stopKval, &lEntry->klen);
 		if((cmp == LESS) || (cmp == EQUAL && (stopCompOp == SM_LT)))
 		{
 			cursor->flag = CURSOR_EOS;
