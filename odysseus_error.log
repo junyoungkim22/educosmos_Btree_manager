@@ -465,3 +465,4 @@
 [PID=35265][Thu May  9 14:57:21 2019] Error : -458758(eDUPLICATEDKEY_BTM) in edubtm_Insert.c:152
 [PID=35265][Thu May  9 14:57:21 2019] Error : -458758(eDUPLICATEDKEY_BTM) in edubtm_Insert.c:138
 [PID=35265][Thu May  9 14:57:21 2019] Error : -458758(eDUPLICATEDKEY_BTM) in EduBtM_InsertObject.c:103
+[PID=42739][Thu May  9 19:17:02 2019] Error : -458753(eBADBTREEPAGE_BTM) in EduBtM_Test.c:855

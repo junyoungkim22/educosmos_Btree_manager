@@ -262,7 +262,7 @@ Four edubtm_InsertLeaf(
 		leaf.nObjects = 1;
 		leaf.klen = kval->len;
 		memcpy(leaf.kval, kval->val, leaf.klen);
-		e = edubtm_SplitLeaf(catObjForFile, pid, page, idx, &leaf, item);
+		e = edubtm_SplitLeaf(catObjForFile, pid, page, idx + 1, &leaf, item);
 		if(e < 0) ERR(e);
 	}
 
